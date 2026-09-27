@@ -30,6 +30,7 @@ The challenge to be possed to students is that while a closed from solution exis
 The methods extends from point estimation to confidence interval estimation.
 Root finding methods are discussed as ways to compute the estimates by inverting the tests.
 Illustrated is a progression from using the closed form solution to using existing software to using software develop for the specific problem.  Which opens for a discussion of when and how to optimize.
+In the appendix we present material which could be used or adapted for a student project.
 
 Keywords: Computational Efficiency; Location Estimators; Root Finding; Wilcoxon 
 \end{abstract}
@@ -37,7 +38,7 @@ Keywords: Computational Efficiency; Location Estimators; Root Finding; Wilcoxon
 \section{Introduction}
 
 Students in a first or second course in statistics or data science may encounter the
-Wilcoxon signed-rank test as a standard nonparametric alternative to
+Wilcoxon (\cite{wilcoxon45}) signed-rank test as a standard nonparametric alternative to
 the one-sample $t$-test. Less often, the associated location estimator
  - the \emph{Hodges--Lehmann estimator} \citep{hl63} - is covered. 
 The pairing mirrors two others that they
@@ -75,11 +76,9 @@ averages must be held (in memory) at once.
 This paper uses the Hodges--Lehmann
 estimator as a running example to illustrate 
 the use of iterative methods for computing with data.
-%three ideas at the
-%intersection of statistics and computing: that a closed-form solution
-%is not always the best way to compute an estimator; that a faster
-%algorithm is not an improvement if it gives wrong answers; and that
-%these lessons generalize well beyond rank-based methods.
+Most of the paper presents root-finding and computational efficiency cosiderations for the one-sample location problem. 
+A short section presenting results from a similar study for the two-sample location shift problem.
+An appendix offers project ideas for extending the study.
 
 
 \section{Darwin's \emph{Zea mays} data}
@@ -156,7 +155,7 @@ legend("topleft", legend = c("mean", "median", "HL"), lty = c(2, 3, 4), col = "g
 Sensitivity to a single observation is a standard way to measure robustness.\footnote{Sensitivity curves approximate the influence function of an estimator, which is a more formal measure of robustness. See \citet{hm11} for more information.}
 For an estimator $T$ and a sample of size $n$, the \emph{sensitivity curve} is
 \[
-	S_T(x) = \frac{ T(x_1, \ldots, x_n, x) - T(x_1, \ldots, x_n) }{1/(n + 1)}, \;\;\; -\infty < x < infty.
+	S_T(x) = \frac{ T(x_1, \ldots, x_n, x) - T(x_1, \ldots, x_n) }{1/(n + 1)}, \;\;\; -\infty < x < \infty.
 \]
 So, the value $S_T(x)$ is an approximate measure of the rate of change of the estimator at the outlier~$x$.
 The figure below presents \emph{sensitivity curves} for the three estimators based on the Darwin data.
@@ -655,8 +654,35 @@ case for trading a closed-form expression for an iterative method.
 
 In practice both could be implemented in a single function, with the direct method used for small $n$ and the iterative method for large $n$. This is the convention used in the base R function \verb+wilcox.test+ - with a cutoff at $n = 50$ for the one-sample case.
 
+\section{Confidence Interval Coverage}
+\label{sec:coverage}
+Prior to version 4.6.0 R \cite{Rcore} the confidence interval in \verb+wilcox.test+ and listed the incorrect coverage. The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
+The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\cite{hw99}) . 
 
-\section{The two-sample problem}
+
+<<coverage, echo=TRUE>>=
+# c.f., HW (1999) Section 3.3
+set.seed(1999)
+n <- 9
+nsim <- 190000
+sampMat <- matrix(rt(n*nsim,9),nrow=nsim)
+alpha <- psignrank(5,n)
+
+# create single line functions to compute the confidence intervals
+w_ci0 <- function(x) wilcox.test(x,conf.int=TRUE, conf.level=1-2*alpha)$conf.int
+w_ci1 <- function(x) wilcoxon_ci_1(x,conf.int=TRUE, conf.level = 1-2*alpha)$conf.int
+
+ciMat0 <- apply(sampMat, 1, w_ci0)
+ciMat1 <- apply(sampMat, 1, w_ci1)
+
+cat("Nominal coverage:", 1-2*alpha, "\n")
+cat("Simulation estimated coverage of wilcox.test: ")
+mean( (ciMat0[1,] < 0) & (ciMat0[2,] > 0) )
+cat("Simulation estimated coverage of wilcoxon: ")
+mean( (ciMat1[1,] < 0) & (ciMat1[2,] > 0) )
+@
+
+\section{The Two-Sample Problem}
 \label{sec:twosample}
 
 The one-sample location model extends naturally to a two-sample location
@@ -717,9 +743,12 @@ also returns this
 quantity, with the additional cost of also constructing a confidence interval - representing three minimizations rather than one as well as computing the test statistic and its $p$-value.
 When speed is a concern - for example in a big-data setting or for resampling (bootstrap) - the \verb+wilcoxon+ package represents a better choice.
 
+Note: we have noticed that \verb+wilcox.test+ returns the incorrect coverage for the confidence interval.  
+The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
+
 \subsection*{Validation}
-The next R chunk concerns validation of the three iterative implementations in the package \verb+wilcoxon+:
-<<two-sample-validate>>=
+The next R chunk presents output for validation - printed is the max difference - of the three iterative implementations in the package \verb+wilcoxon+:
+<<two-sample-validate, echo=FALSE>>=
 library(wilcoxon)
 set.seed(1)
 m <- n <- 30
@@ -737,15 +766,15 @@ c(uniroot      = max(abs(results["uniroot",      ] - results["exact", ])),
   toms516_port = max(abs(results["toms516_port", ] - results["exact", ])),
   toms516_vec  = max(abs(results["toms516_vec",  ] - results["exact", ])))
 @
-
-All three iterative methods agree with the exact one to well within
+\noindent
+All three iterative methods agree with the exact method to well within
 any practical tolerance across 500 simulated samples of size $m = n =
 30$.
 
 \subsection*{Timing}
 The next R chunk investigates the comparative speeds of the direct algorithm and the three iterative implementations in the package \verb+wilcoxon+:
 
-<<two-sample-timing, echo=TRUE>>=
+<<two-sample-timing, echo=FALSE>>=
 library(microbenchmark)
 ns        <- c(25, 50, 100, 500, 1000, 1500, 2000)
 exact_cap <- 1000
@@ -770,7 +799,7 @@ for (i in seq_along(ns)) {
 timings
 @
 
-<<two-sample-plot, fig.width=6, fig.height=4, fig.cap="Elapsed time for four implementations of the two-sample Hodges--Lehmann estimator against sample size $m = n$, on log--log axes. The exact method grows quadratically and is capped at $n = 1000$; the three iterative methods scale gently. The vectorized \\texttt{toms516} variant improves on the interpreted-R port by a large constant factor.">>=
+<<two-sample-plot, fig.width=6, fig.height=4, echo=FALSE, fig.cap="Elapsed time for four implementations of the two-sample Hodges--Lehmann estimator against sample size $m = n$, on log--log axes. The exact method grows quadratically and is capped at $n = 1000$; the three iterative methods scale gently. The vectorized \\texttt{toms516} variant improves on the interpreted-R port by a large constant factor.">>=
 ylim <- range(unlist(timings[, -1]), na.rm = TRUE)
 plot(NA, xlim = range(timings$n), ylim = ylim, log = "xy",
      xlab = expression(n), ylab = "elapsed time (s)")
@@ -801,8 +830,20 @@ confirm the same picture. Implementation and empirical verification
 are left as a project; a suggested outline appears in
 Appendix~\ref{app:project}.
 
+\section{Conclusion}
+
+This paper presents material that could be used in undergraduate or graduate courses on computing with data, data science, nonparametric statistics, and the like.
+The appendix contains ideas for student projects.
+
+We covered key aspects of computational optimazation in the context of the Hodges--Lehmann estimators of location (one-sample problem) and shift (two-sample problem). The direct method is simple and transparent, but scales poorly with sample size. The iterative method is more sophisticated, but scales well and is practical for large samples. Validation confirms that they produce the same results to within numerical tolerance.
+
+Computational efficiency aspects covered include root-finding versus a direct method, vectorization in R, using microbenchmark to measure elapsed time.  
+The TOMS 516 port (\citet{toms516}) illustrates that an algorithm written for a specific problem can lead to better computational performance than a general-purpose root-finder. 
+We leave it as a point of discussion of whether the gains in speed are worth the extra complexity of implementing a specialized algorithm, or whether the general-purpose root-finder is sufficient for most practical purposes.
+
 
 \appendix
+
 
 \section{Project: implementing the two-sample estimator}
 \label{app:project}
@@ -897,9 +938,7 @@ identical; only the implementation primitives change.
 built-in \verb+wilcox.test(x, y, conf.int = TRUE)+ produces its own
 point estimate and confidence interval via different internal
 machinery; the \verb+wilcoxon+ package provides validated versions
-of all three algorithms. Verify agreement on the point estimate and
-investigate any discrepancies in the CI. (\verb+wilcox.test+'s CI
-indexing has a known off-by-one issue.)
+of all three algorithms. Verify agreement or investigate discrepancies for the the point estimate and the CI. 
 
 \end{itemize}
 
