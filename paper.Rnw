@@ -13,7 +13,7 @@
 
 \title{Computing Hodges--Lehmann Estimators: \\
 A Case Study in Algorithms for Computing with Data}
-\author{John D. Kloke}
+\author{John D. Kloke \and Joseph W.\ McKean}
 \date{\today}
 
 \begin{document}
@@ -23,23 +23,34 @@ A Case Study in Algorithms for Computing with Data}
 knitr::opts_chunk$set(highlight = FALSE)
 @
 
+\begin{abstract}
+We present discussions of algorithms which are suitable for a short module or lecture in an undergraduate or masters level data science, computational statistics, or nonparametrics course.
+The problems presented are the computation of the Hodges-Lehmann estimates of location and shift for the one- and two- sample problems, respectively.  The estimates can be derived by inverting the Wilcoxon test of hypothesis for the two problems.
+The challenge to be possed to students is that while a closed from solution exists for the estimates, it may be computationally slower or even infesable for even moderately sized datasets.
+The methods extends from point estimation to confidence interval estimation.
+Root finding methods are discussed as ways to compute the estimates by inverting the tests.
+Illustrated is a progression from using the closed form solution to using existing software to using software develop for the specific problem.  Which opens for a discussion of when and how to optimize.
+
+Keywords: Computational Efficiency; Location Estimators; Root Finding; Wilcoxon 
+\end{abstract}
+
 \section{Introduction}
 
 Students in a first or second course in statistics or data science may encounter the
 Wilcoxon signed-rank test as a standard nonparametric alternative to
 the one-sample $t$-test. Less often, the associated location estimator
  - the \emph{Hodges--Lehmann estimator} \citep{hl63} - is covered. 
-The pairing mirrors two others they
+The pairing mirrors two others that they
 may already know: the sample mean goes with the $t$-test, and the sample
 median goes with the sign test. The latter being a simple way to introduce hypothesis testing requiring the most basic of assumptions - see Section~2.3 of \citet{km24}.
 In each case the estimator returns
 the value of the location parameter at which the corresponding test
-statistic is closest to its expected value under the null hypothesis - 
-representing the value which makes the test \emph{most non-significant} or the value of the test statistic furthest from significance.
-This process is sometimes referred to as \emph{inverting the test}.
+statistic is closest to its expected value under the null hypothesis; i.e.,
+the estimator is the value which makes the test \emph{most non-significant} or the value of the test statistic furthest from significance.
+This process is sometimes referred to as \emph{estimation by inverting the test}.
 
 For a sample $x_1, \ldots, x_n$ drawn from a distribution symmetric
-about a location parameter $\theta$, the Hodges--Lehmann estimator of
+about a location parameter $\theta$, the Hodges--Lehmann estimator (\emph{hle}) of
 $\theta$ is
 \[
 \hat\theta_{\HL} =
@@ -49,21 +60,21 @@ The $n(n+1)/2$ pairwise averages
 \[
 	w_{ij} = \frac{x_i + x_j}{2}, \quad 1 \le i \le j \le n
 \]
-are known as \emph{Walsh averages}.
+are known as the \emph{Walsh averages}.
 So that the Hodges--Lehmann estimator is the median of the Walsh averages.
 %The definition is elementary: no
 %ranks, no test statistic, no calculus. Anyone who can form a pairwise
 %average and take a median can compute it.
 
 %The simplicity is deceptive. 
-While a closed-form solution for the estimator is available, it is not always the best way to compute an estimator.
-A direct implementation runs out of
+When a closed-form solution for the estimator is available, it is not always the best way to compute the estimator.
+For example, a direct implementation of the closed-form solution of the Hodges--Lehmann estimator runs out of
 memory well before $n$ reaches $10^5$, because all $n(n+1)/2$ Walsh
 averages must be held (in memory) at once. 
 
 This paper uses the Hodges--Lehmann
 estimator as a running example to illustrate 
-use of iterative methods for computing with data.
+the use of iterative methods for computing with data.
 %three ideas at the
 %intersection of statistics and computing: that a closed-form solution
 %is not always the best way to compute an estimator; that a faster
@@ -77,7 +88,7 @@ use of iterative methods for computing with data.
 In 1876 Charles Darwin published \emph{The Effects of Cross- and
 Self-Fertilisation in the Vegetable Kingdom} \cite{darwin1876}, reporting the heights
 of fifteen pairs of \emph{Zea mays} (corn) plants. Within each pair,
-one plant had been cross-fertilized and the other self-fertilized;
+one plant had been cross-fertilized while the other was self-fertilized and
 the two were grown in the same pot - representing a paired design. 
 Darwin's question was whether
 cross-fertilization produced taller plants. He suspected so, but was
@@ -99,7 +110,7 @@ length(d)
 # view the data
 d
 @
-Three estimators - mean, median, and hle - of the center (location) give three different answers as illustrated in the following code chunk.
+The three estimators - mean, median, and hle - of the center (location) give three different answers as illustrated in the following code chunk.
 
 <<darwin-est>>=
 mean(d)
@@ -111,7 +122,9 @@ walsh <- function(x) {
 }
 median(walsh(d))
 @
-
+\noindent
+The dotplot of the differences in Figure~\ref{fig:darwin-dot} shows the sensitivity of the mean to the low-valued outliers (\Sexpr{sort(d)[1:2]}).
+The median and the Hodges--Lehmann estimates are less sensitive to the outlying points.
 %The three estimators disagree. The mean is pulled toward the pair of
 %negative differences at the bottom of the sample; the median and
 %Hodges--Lehmann estimator both sit closer to the bulk of positive
@@ -140,12 +153,12 @@ legend("topleft", legend = c("mean", "median", "HL"), lty = c(2, 3, 4), col = "g
 %wrong; the median and Hodges--Lehmann estimator both use rank
 %information rather than raw magnitudes, and are correspondingly resistant.
 
-Sensitivity to a single observation is a standard way to measure robustness.\footnote{Sensitivity curves approximate the influence function of an estimator, which is a more formal measure of robustness. See \citet{hm11} for a more information.}
+Sensitivity to a single observation is a standard way to measure robustness.\footnote{Sensitivity curves approximate the influence function of an estimator, which is a more formal measure of robustness. See \citet{hm11} for more information.}
 For an estimator $T$ and a sample of size $n$, the \emph{sensitivity curve} is
 \[
-	S_T(x) = \frac{ T(x_1, \ldots, x_n, x) - T(x_1, \ldots, x_n) }{1/(n + 1)}.
+	S_T(x) = \frac{ T(x_1, \ldots, x_n, x) - T(x_1, \ldots, x_n) }{1/(n + 1)}, \;\;\; -\infty < x < infty.
 \]
-So, the value $S_T(x)$ is a approximate measure of the rate of change of the estimator at the outlier~$x$.
+So, the value $S_T(x)$ is an approximate measure of the rate of change of the estimator at the outlier~$x$.
 The figure below presents \emph{sensitivity curves} for the three estimators based on the Darwin data.
 
 <<darwin-sc, fig.width=6, fig.height=4, fig.cap="Sensitivity curves for the mean, median, and Hodges--Lehmann estimator on Darwin's data. Each curve shows how the estimate on 14 pairs shifts when a fifteenth observation $x$ is added, scaled by $n=15$. The mean is unbounded; the median and HL are bounded.", echo=FALSE>>=
@@ -178,7 +191,7 @@ distribution, the asymptotic relative efficiency of the
 Hodges--Lehmann estimator against the sample mean is $3/\pi \approx
 0.955$, compared with $2/\pi \approx 0.637$ for the median
 c.f., \citep{hm11}. That is, at the normal the
-Hodges--Lehmann estimator loses about $5\%$ relative to the mean,
+Hodges--Lehmann estimator loses about $5\%$ efficiency relative to the mean,
 while the median loses about $37\%$. At heavier-tailed distributions
 both rank-based estimators outperform the mean, and the Hodges--Lehmann
 estimator typically has the edge over the median.
@@ -201,11 +214,12 @@ round(rbind(
 ), 3)
 @
 
-Rows give efficiency relative to the sample mean; values above one
+Rows give efficiencies relative to the sample mean; values above one
 indicate better performance. At the normal, the Hodges--Lehmann
 estimator is nearly as efficient as the mean while the median trails
-by a good margin. At $t_3$, both rank-based estimators beat the mean
-handily, and the Hodges--Lehmann estimator has the edge. The
+by a good margin. At the Student-$t$ distribution with 3 degrees of freedom, $t_3$, both rank-based estimators
+are much more efficient than the mean,
+and, of the two robust estimators, the Hodges--Lehmann estimator definitely has the edge in efficiency. The
 pattern --- comparable to the mean at the normal, better than the
 median away from it --- is the standard case for the Hodges--Lehmann
 estimator as a default choice for symmetric location.
@@ -217,7 +231,7 @@ The definition of $\hat\theta_{\HL}$ is itself an algorithm: compute
 all $n(n+1)/2$ Walsh averages, then return their median. The
 \verb+walsh+ function of the previous section computes the Walsh averages and 
 base R's \verb+median+ does the rest. For Darwin's data ($n = 15$, hence
-$120$ Walsh averages) the computation is essentially instantaneous.
+there are $120$ Walsh averages), the computation is essentially instantaneous.
 Nothing about the code suggests trouble.
 
 But the code has a hidden cost that grows very quickly with $n$.
@@ -247,7 +261,7 @@ and the implementation; the leading-order behavior does not, and it
 is a property of the algorithm itself.
 
 Familiar examples make the notation concrete. Computing the sample
-mean of $n$ numbers takes $n - 1$ additions and one division: work
+mean of $n$ numbers takes $n\! -\! 1$ additions and one division: work
 proportional to $n$, or $O(n)$. Doubling the sample size doubles the
 work. Computing the sample median requires (at least partially)
 sorting the data, which good algorithms accomplish in $O(n \log n)$
@@ -267,33 +281,41 @@ problem requires. The Hodges--Lehmann estimator is a single number;
 nothing in the definition demands that we compute half a billion
 pairwise averages to find it. 
 
-Whether that optimizing an algorithm matters depends on the problem. \citet{knuth74} cautioned that "premature optimization is the root of all evil," a warning that the effort of finding a faster algorithm is often not repaid. 
+Whether or not the computational optimization of 
+ an algorithm matters depends on the problem. \citet{knuth74} cautioned that "premature optimization is the root of all evil," a warning that the effort of finding a faster algorithm is often not repaid. 
 The Hodges--Lehmann estimator is a case where the effort is repaid, because the direct implementation runs out of memory long before typical modern sample sizes.
 
 
-\section{Iterative algorithms}
+\section{Iterative Algorithms}
 
 The Wilcoxon signed-rank test provides a different characterization of
 the Hodges--Lehmann estimator, one that leads directly to a faster
-algorithm for even moderately sized dataset (say $n>100$).
+algorithm for even moderately sized datasets (say $n>100$).
 
 For a hypothesized location $\theta_0$, the signed-rank statistic is
-\[
+\begin{displaymath}
 W(\theta_0) = \sum_{i=1}^n \operatorname{sign}(x_i - \theta_0)\,
               R(|x_i - \theta_0|),
-\]
+\end{displaymath}
 where $R(|x_i - \theta_0|)$ is the rank of $|x_i - \theta_0|$ among the
-absolute deviations $|x_1 - \theta_0|, \ldots, |x_n - \theta_0|$. Under
+absolute deviations $|x_1 - \theta_0|, \ldots, |x_n - \theta_0|$.
+Under
 the null hypothesis that the data are sampled symmetrically around
 $\theta_0$, positive and negative signed-ranks are equally likely, and
-$W(\theta_0)$ has expected value zero. Values of $W$ far from zero are
+$W(\theta_0)$ has expected value zero.
+ Values of $W$ far from zero are
 evidence against $\theta_0$; values of $W$ near zero are values of
 $\theta_0$ consistent with the data.
+The function $W(\theta)$, $-\infty < \theta < \infty$, is called the one-sample process.
 
 This suggests a second definition: the Hodges--Lehmann estimator is
 the value of $\theta$ that makes $W(\theta)$ closest to zero.
-\citet{hl63} showed that this value is exactly the median
-of the Walsh averages, so the two definitions describe the same
+This value is exactly the median
+of the Walsh averages.\footnote{Follows from the identity: $ \sum_{i=1}^n \operatorname{sign}(x_i - \theta_0)\,
+              R(|x_i - \theta_0|)
+= \sum_{i \le j} \operatorname{sign}\left[\frac{x_i+x_j}{2} - \theta_0\right]$. Also, it shows that
+$W(\theta_0)$ is a decreasing step function which steps down at each Walsh average; see page 12 of \citet{hm11}.}
+So, the two definitions describe the same
 estimator. They suggest, however, very different algorithms.
 
 To see the second characterization at work, write $W(\theta)$ as an R
@@ -307,14 +329,16 @@ W <- function(theta, x) {
 }
 @
 
-The plot below shows $W(\theta)$ across a range of $\theta$ values. The Hodges--Lehmann estimate is the value of $\theta$ at which $W(\theta)$ crosses zero.
-<<W-plot, fig.width=6, fig.height=4, fig.cap="The signed-rank statistic $W(\\theta)$ for Darwin's plant-height differences. The function is monotone and piecewise constant; it crosses zero at the Hodges--Lehmann estimate.", echo=FALSE>>=
+The plot below shows $W(\theta)$ across a range of $\theta$ values. It is a decreasing
+step function of $\theta$ which steps down at each Walsh average.
+The Hodges--Lehmann estimate is the value of $\theta$ at which $W(\theta)$ crosses zero.
+<<W-plot, fig.width=6, fig.height=4, fig.cap="The signed-rank statistic $W(\\theta)$ for Darwin's plant-height differences. The function is a monotone and piecewise constant, decreasing step function; it crosses zero at the Hodges--Lehmann estimate.", echo=FALSE>>=
 thetas <- seq(min(d), max(d), length.out = 401)
 Ws <- sapply(thetas, W, x = d)
 plot(thetas, Ws, type = "s",
      xlab = expression(theta), ylab = expression(W(theta)))
-abline(h = 0, lty = 2, col = "grey")
-abline(v = median(walsh(d)), lty = 3, col = "grey")
+abline(h = 0, lty = 2, col = "grey33")
+abline(v = median(walsh(d)), lty = 3, col = "grey33")
 legend("topright",
        legend = expression(hat(theta)[HL]),
        lty = 3, col = "grey", bty = "n")
@@ -324,12 +348,13 @@ Two features of the plot deserve attention. First, $W$ is monotone
 decreasing in $\theta$: as $\theta$ grows, more of the residuals $x_i
 - \theta$ become negative, and the signed-ranks contribute more
 negatively to the sum. Monotonicity guarantees a unique crossing of
-zero, so the Hodges--Lehmann estimate is unambiguously located
-somewhere in the plot --- specifically, at the vertical dashed line.
+zero (if the number of Walsh averages is odd) or an interval of zero crossings (if the number of Walsh averages is even); so, the Hodges--Lehmann estimate is unambiguously located
+somewhere on the horizontal axis of the plot; for the example, specifically at the vertical dashed line.
 Second, $W$ is not smooth. It is piecewise constant, with jumps at
 the Walsh averages, and its derivative in the ordinary sense either
-does not exist or equals zero. Methods for finding minima or roots
-that require derivatives will not apply directly.
+does not exist or equals zero. Because it is monotone, though, the concept of slope persists.
+Methods for finding minima or roots
+that require derivatives, however, will not apply directly.
 
 Monotonicity alone, however, is enough. Any numerical method that
 locates a zero of a function by evaluating it repeatedly --- rather
@@ -349,11 +374,11 @@ interval by keeping the half that still contains the crossing.
 The intermediate value theorem, from a first course in calculus,
 guarantees that a continuous function changing sign on $[a, b]$ has a
 root in the interval. Our $W$ is not continuous --- it is piecewise
-constant --- but the algorithm does not care: what bisection actually
+constant; but the function $W(\theta)$ does have a root or an interval of roots. What bisection actually
 finds is the sub-interval on which the sign change occurs, and
 monotonicity of $W$ ensures that this sub-interval is unique.
 
-Concretely, given $W(a) > 0$ and $W(b) < 0$, evaluate $W$ at the
+Concretely, the bisection algorithm iterates using: given $W(a) > 0$ and $W(b) < 0$, evaluate $W$ at the
 midpoint $m = (a + b)/2$. If $W(m) > 0$ the crossing is in $[m, b]$
 and we replace $a$ with $m$; if $W(m) < 0$ it is in $[a, m]$ and we
 replace $b$ with $m$; if $W(m) = 0$ we are done. Each iteration
@@ -432,7 +457,7 @@ for (k in seq_len(K)) {
   }
 }
 knitr::kable(trace, format = "latex", booktabs = TRUE, escape = FALSE,
-             align = "c", label = "bisect-trace",
+	                 align = "c", label = "bisect-trace",
              caption = "First iterations of bisection on Darwin's data.",
              col.names = c("$k$", "$a_k$", "$b_k$", "$m_k$",
                            "$W(m_k)$", "Update"))
@@ -490,15 +515,16 @@ text(trace$m[in_zp], trace$Wm[in_zp],
 
 The \verb+bisect+ function of the previous section is deliberately
 simple: it discards half its work on every iteration, using nothing
-about the function beyond the sign of a single evaluation. R's
-built-in \verb+uniroot+ is more sophisticated. It combines bisection
+about the function beyond the sign of a single evaluation.
+The built-in R function
+\verb+uniroot+ is more sophisticated. It combines bisection
 with interpolation --- specifically Brent's method \citep{brent73} --- so that on
 smooth functions it can converge much faster while still falling back
 on bisection when the interpolation misbehaves.
 
 For our step-function $W$ the interpolation buys little --- there is
 no smooth curve to work with --- but the fallback to bisection means
-the algorithm still converges reliably. \verb+uniroot+ is a
+the algorithm still converges reliably. The function \verb+uniroot+ is a
 well-tested tool with sensible defaults.
 So there is generally little to no reason to reinvent it in production code. 
 The call structure is essentially the same as our \verb+bisect+.
@@ -509,7 +535,7 @@ fit$root
 median(walsh(d))
 @
 
-Both estimates match. \verb+uniroot+ has done the same job as
+Both estimates match. The R function \verb+uniroot+ has done the same job as
 \verb+bisect+, using the same mathematical idea, with a better
 underlying implementation.
 
@@ -582,9 +608,9 @@ The direct method is $O(n^2)$; the iterative method is $O(n \log n
 \cdot \log(1/\epsilon))$. In principle the iterative method should
 win for large $n$. This section measures the practical crossover
 using the \verb+microbenchmark+ package \citep{microbenchmark}.
-Note: walsh is not run for $n > 1000$ as it is too slow - as the plot indicate.
+Note that the function \verb|walsh| is not run for $n > 1000$ as it is too slow - as the plot indicates.
 
-<<timing, cache=TRUE, echo=FALSE>>=
+<<timing,echo=TRUE>>=
 library(microbenchmark)
 ns        <- c(25, 50, 100, 500, 1000, 1500, 2000)
 exact_cap <- 1000
@@ -615,17 +641,17 @@ legend("topleft",
        pch = c(19, 1), lty = 1, bty = "n")
 @
 
-At the smallest sample sizes we consider  - the two methods are both quite fast,
+At the smallest sample sizes, the two methods are both quite fast,
 each taking a fraction of a millisecond. As $n$ grows, the direct
 method's quadratic cost pulls it upward on the log--log plot with
 slope close to two, while the iterative method rises much more slowly.
-Beyond $n = 1000$ the direct method is not run at all - too slow.
+Beyond $n = 1000$ the direct method is not run at all due to its slowness.
 
-The theoretical big-$O$ prediction and the measured behavior line up.
-For a sample of the size a modern applied problem might present ---
-tens of thousands or more --- the direct implementation is not an
-option, while the iterative one remains routine. This is the practical
-case for trading a closed-form expression for an iteration.
+The theoretical big-$O$ prediction and the measured behavior are in agreement.
+For a sample of the size that a modern applied problem might present ---
+tens of thousands or more --- the direct implementation is not even an
+option, while the iterative implementation remains routine. This is the practical
+case for trading a closed-form expression for an iterative method.
 
 In practice both could be implemented in a single function, with the direct method used for small $n$ and the iterative method for large $n$. This is the convention used in the base R function \verb+wilcox.test+ - with a cutoff at $n = 50$ for the one-sample case.
 
@@ -633,32 +659,32 @@ In practice both could be implemented in a single function, with the direct meth
 \section{The two-sample problem}
 \label{sec:twosample}
 
-The one-sample story extends naturally to a two-sample location
+The one-sample location model extends naturally to a two-sample location
 shift model. Suppose we observe independent samples $x_1, \ldots, x_m$
-and $y_1, \ldots, y_n$ where $X_i \sim F(\,\cdot\, - \Delta)$ and
-$Y_j \sim F$. Positive $\Delta$ means the $X$-sample is shifted right
-of the $Y$-sample. The Hodges--Lehmann estimator of $\Delta$ is
+and $y_1, \ldots, y_n$ where $X_i \sim F(\,\cdot\, + \Delta)$ and
+$Y_j \sim F(\cdot)$. Positive $\Delta$ means that the distribution of $X$ is shifted to the right
+of the distribution of $Y$. The Hodges--Lehmann estimator of $\Delta$ is
 \[
 \hat\Delta_{\HL} = \med\{x_i - y_j : 1 \le i \le m, \; 1 \le j \le n\},
 \]
 the median of the $mn$ pairwise $x - y$ differences.
 
-The Mann--Whitney--Wilcoxon test provides the parallel to the
-signed-rank test of the main text. Its statistic
+For the two-sample problem, the Mann--Whitney--Wilcoxon test provides the parallel to the
+signed-rank test for the one-sample problem.  The test  statistic is:
 \[
-U = \#\{(i, j) : x_i > y_j, \; 1 \le i \le m, \; 1 \le j \le n\}
+U = \#\{(i, j) : x_i > y_j, \; 1 \le i \le m, \; 1 \le j \le n\}.
 \]
-counts the pairs in which the $x$-observation exceeds the
+So $U$ counts the pairs in which the $x$-observation exceeds the
 $y$-observation. Under $H_0 : \Delta = 0$, $U$ has expected value
 $mn/2$; values far from $mn/2$ are evidence against the null.
 
-Evaluated on the shifted sample $\{x_i - \Delta\}$, the same
-statistic becomes a function of the shift:
+Evaluated on the shifted sample $\{x_i - \Delta\}$, the two-sample process is the function
 \[
 U(\Delta) = \#\{(i, j) : x_i - y_j > \Delta\}.
 \]
-This is a step function of $\Delta$, decreasing from $mn$ (below all
-pairwise differences) to $0$ (above them). The Hodges--Lehmann
+Hence, the test statistic is $U(0)$.
+The function $U(\Delta)$  is a step function of $\Delta$, decreasing from $mn$ 
+to $0$. The Hodges--Lehmann
 characterization applies again: $\hat\Delta_{\HL}$ is the value of
 $\Delta$ at which $U(\Delta) = mn/2$, or as close to it as the step
 function allows.
@@ -678,20 +704,21 @@ The \verb+wilcoxon+ R package \citep{wilcoxon} implements three algorithms:
 \verb+wilcoxon_ci_2_exact+ forms the $mn$ pairwise differences and
 takes their median; \verb+wilcoxon_ci_2_uniroot+ uses \verb+uniroot+
 on $U(\Delta) - mn/2$ with an efficient two-pointer $U$-evaluator;
-and \verb+wilcoxon_ci_2_toms516+ uses an Illinois-modified regula
-falsi in the style of \citet{toms516}. The toms516 backend has
+and \verb+wilcoxon_ci_2_toms516+ uses an Illinois-modified regula-falsi method in the style of \citet{toms516}. The toms516 backend has
 two implementation variants: \verb+_port+ is a direct interpreted-R
 translation of the original Fortran, while \verb+_vec+ replaces the
 two-pointer walk with \verb+findInterval+, pushing the sorted-array
 traversal into base R's compiled C loop for a large constant-factor
 speedup. R's built-in \\
+\begin{center}
 \verb+wilcox.test(x, y, conf.int = TRUE)$estimate+ 
+\end{center}
 also returns this
-quantity, at the cost of also constructing a confidence interval - representing three minimization rather than one as well as computing the test and $p$-value.
+quantity, with the additional cost of also constructing a confidence interval - representing three minimizations rather than one as well as computing the test statistic and its $p$-value.
 When speed is a concern - for example in a big-data setting or for resampling (bootstrap) - the \verb+wilcoxon+ package represents a better choice.
 
 \subsection*{Validation}
-
+The next R chunk concerns validation of the three iterative implementations in the package \verb+wilcoxon+:
 <<two-sample-validate>>=
 library(wilcoxon)
 set.seed(1)
@@ -716,8 +743,9 @@ any practical tolerance across 500 simulated samples of size $m = n =
 30$.
 
 \subsection*{Timing}
+The next R chunk investigates the comparative speeds of the direct algorithm and the three iterative implementations in the package \verb+wilcoxon+:
 
-<<two-sample-timing, cache=TRUE>>=
+<<two-sample-timing, echo=TRUE>>=
 library(microbenchmark)
 ns        <- c(25, 50, 100, 500, 1000, 1500, 2000)
 exact_cap <- 1000
@@ -872,23 +900,6 @@ machinery; the \verb+wilcoxon+ package provides validated versions
 of all three algorithms. Verify agreement on the point estimate and
 investigate any discrepancies in the CI. (\verb+wilcox.test+'s CI
 indexing has a known off-by-one issue.)
-
-\item \textbf{Confidence intervals.} Extend the algorithm to compute
-a confidence interval for $\Delta$ by inverting the MWW test,
-following \citet{bauer72}. Care is required with half-integer
-targets to handle the step-function structure of $U$; the
-\verb+wilcoxon+ package's implementation is a useful reference.
-
-\item \textbf{Ties.} The algorithms as stated assume continuous data
-with no ties. Extend the two-pointer evaluator to handle ties via
-midranks, and verify on integer-valued data.
-
-\item \textbf{Winsorized Wilcoxon scores.} The signed-rank statistic
-uses the linear (Wilcoxon) score function. Winsorized Wilcoxon
-scores (available as \texttt{bentscores4} in \verb+Rfit+
-\citep{Rfit}) yield a more robust estimator at heavy tails. Modify the one-sample
-$W(\theta)$ evaluator and rerun the timing and efficiency
-simulations of the main paper.
 
 \end{itemize}
 
