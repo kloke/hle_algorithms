@@ -26,19 +26,19 @@ knitr::opts_chunk$set(highlight = FALSE)
 \begin{abstract}
 We present discussions of algorithms which are suitable for a short module or lecture in an undergraduate or masters level data science, computational statistics, or nonparametrics course.
 The problems presented are the computation of the Hodges-Lehmann estimates of location and shift for the one- and two- sample problems, respectively.  The estimates can be derived by inverting the Wilcoxon test of hypothesis for the two problems.
-The challenge to be possed to students is that while a closed from solution exists for the estimates, it may be computationally slower or even infesable for even moderately sized datasets.
+The challenge to be posed to students is that while a closed form solution exists for the estimates, it may be computationally slower or even infeasible for even moderately sized datasets.
 The methods extends from point estimation to confidence interval estimation.
 Root finding methods are discussed as ways to compute the estimates by inverting the tests.
-Illustrated is a progression from using the closed form solution to using existing software to using software develop for the specific problem.  Which opens for a discussion of when and how to optimize.
+Illustrated is a progression from using the closed form solution to using existing software to using software developed for the specific problem.  This opens a discussion of when and how to optimize.
 In the appendix we present material which could be used or adapted for a student project.
 
-Keywords: Computational Efficiency; Location Estimators; Root Finding; Wilcoxon 
+Keywords: Computational Efficiency; Confidence Intervals; Location Estimators; Nonparametric; Root Finding; Wilcoxon 
 \end{abstract}
 
 \section{Introduction}
 
 Students in a first or second course in statistics or data science may encounter the
-Wilcoxon (\cite{wilcoxon45}) signed-rank test as a standard nonparametric alternative to
+Wilcoxon (\citet{wilcoxon45}) signed-rank test as a standard nonparametric alternative to
 the one-sample $t$-test. Less often, the associated location estimator
  - the \emph{Hodges--Lehmann estimator} \citep{hl63} - is covered. 
 The pairing mirrors two others that they
@@ -77,7 +77,7 @@ This paper uses the Hodges--Lehmann
 estimator as a running example to illustrate 
 the use of iterative methods for computing with data.
 Most of the paper presents root-finding and computational efficiency cosiderations for the one-sample location problem. 
-A short section presenting results from a similar study for the two-sample location shift problem.
+A short section presents the results from a similar study for the two-sample location shift problem.
 An appendix offers project ideas for extending the study.
 
 
@@ -85,13 +85,13 @@ An appendix offers project ideas for extending the study.
 \label{sec:darwin}
 
 In 1876 Charles Darwin published \emph{The Effects of Cross- and
-Self-Fertilisation in the Vegetable Kingdom} \cite{darwin1876}, reporting the heights
+Self-Fertilisation in the Vegetable Kingdom} \citep{darwin1876}, reporting on the heights
 of fifteen pairs of \emph{Zea mays} (corn) plants. Within each pair,
 one plant had been cross-fertilized while the other was self-fertilized and
 the two were grown in the same pot - representing a paired design. 
 Darwin's question was whether
 cross-fertilization produced taller plants. He suspected so, but was
-uncertain what weight to place on the numbers he had. Half a century
+uncertain what weight to place on the numbers he had recorded. Half a century
 later \citet{fisher35} used the same data to illustrate the
 paired $t$-test, and it has been a fixture of introductory
 nonparametrics since.
@@ -189,7 +189,7 @@ estimator from the median. What does is efficiency. At a normal
 distribution, the asymptotic relative efficiency of the
 Hodges--Lehmann estimator against the sample mean is $3/\pi \approx
 0.955$, compared with $2/\pi \approx 0.637$ for the median
-c.f., \citep{hm11}. That is, at the normal the
+(c.f., \cite{hm11}). That is, at the normal the
 Hodges--Lehmann estimator loses about $5\%$ efficiency relative to the mean,
 while the median loses about $37\%$. At heavier-tailed distributions
 both rank-based estimators outperform the mean, and the Hodges--Lehmann
@@ -656,7 +656,7 @@ In practice both could be implemented in a single function, with the direct meth
 
 \section{Confidence Interval Coverage}
 \label{sec:coverage}
-Prior to version 4.6.0 R \cite{Rcore} the confidence interval in \verb+wilcox.test+ and listed the incorrect coverage. The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
+Prior to version 4.6.0 R \citep{Rcore} the confidence interval in \verb+wilcox.test+ listed the incorrect coverage. The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
 The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\cite{hw99}) . 
 
 
@@ -742,9 +742,6 @@ speedup. R's built-in \\
 also returns this
 quantity, with the additional cost of also constructing a confidence interval - representing three minimizations rather than one as well as computing the test statistic and its $p$-value.
 When speed is a concern - for example in a big-data setting or for resampling (bootstrap) - the \verb+wilcoxon+ package represents a better choice.
-
-Note: we have noticed that \verb+wilcox.test+ returns the incorrect coverage for the confidence interval.  
-The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
 
 \subsection*{Validation}
 The next R chunk presents output for validation - printed is the max difference - of the three iterative implementations in the package \verb+wilcoxon+:
