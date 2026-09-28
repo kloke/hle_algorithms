@@ -13,7 +13,16 @@
 
 \title{Computing Hodges--Lehmann Estimators: \\
 A Case Study in Algorithms for Computing with Data}
-\author{John D. Kloke \and Joseph W.\ McKean}
+%\author{John D. Kloke \and Joseph W.\ McKean}
+\author{
+  John D. Kloke\thanks{Corresponding author: johndkloke@gmail.com} \\
+  Department of Mathematics and Computer Science, Northern Michigan University \\
+  Marquette, MI \\
+  \and
+  Joseph W.\ McKean \\
+  Department of Statistics, Western Michigan University \\
+  Kalamazoo, MI
+}
 \date{\today}
 
 \begin{document}
@@ -25,10 +34,10 @@ knitr::opts_chunk$set(highlight = FALSE)
 
 \begin{abstract}
 We present discussions of algorithms which are suitable for a short module or lecture in an undergraduate or masters level data science, computational statistics, or nonparametrics course.
-The problems presented are the computation of the Hodges-Lehmann estimates of location and shift for the one- and two- sample problems, respectively.  The estimates can be derived by inverting the Wilcoxon test of hypothesis for the two problems.
-The challenge to be posed to students is that while a closed form solution exists for the estimates, it may be computationally slower or even infeasible for even moderately sized datasets.
-The methods extends from point estimation to confidence interval estimation.
-Root finding methods are discussed as ways to compute the estimates by inverting the tests.
+The problems presented are the computation of the Hodges--Lehmann estimates of location and shift for the one- and two-sample problems, respectively.  The estimates can be derived by inverting the Wilcoxon test of hypothesis for the two problems.
+The challenge to be posed to students is that while a closed-form solution exists for the estimates, it may be computationally slower or even infeasible for even moderately sized datasets.
+The methods extend from point estimation to confidence interval estimation.
+Root-finding methods are discussed as ways to compute the estimates by inverting the tests.
 Illustrated is a progression from using the closed form solution to using existing software to using software developed for the specific problem.  This opens a discussion of when and how to optimize.
 In the appendix we present material which could be used or adapted for a student project.
 
@@ -38,7 +47,7 @@ Keywords: Computational Efficiency; Confidence Intervals; Location Estimators; N
 \section{Introduction}
 
 Students in a first or second course in statistics or data science may encounter the
-Wilcoxon (\citet{wilcoxon45}) signed-rank test as a standard nonparametric alternative to
+\citet{wilcoxon45} signed-rank test as a standard nonparametric alternative to
 the one-sample $t$-test. Less often, the associated location estimator
  - the \emph{Hodges--Lehmann estimator} \citep{hl63} - is covered. 
 The pairing mirrors two others that they
@@ -76,7 +85,7 @@ averages must be held (in memory) at once.
 This paper uses the Hodges--Lehmann
 estimator as a running example to illustrate 
 the use of iterative methods for computing with data.
-Most of the paper presents root-finding and computational efficiency cosiderations for the one-sample location problem. 
+Most of the paper presents root-finding and computational efficiency considerations for the one-sample location problem. 
 A short section presents the results from a similar study for the two-sample location shift problem.
 An appendix offers project ideas for extending the study.
 
@@ -160,13 +169,17 @@ For an estimator $T$ and a sample of size $n$, the \emph{sensitivity curve} is
 So, the value $S_T(x)$ is an approximate measure of the rate of change of the estimator at the outlier~$x$.
 The figure below presents \emph{sensitivity curves} for the three estimators based on the Darwin data.
 
-<<darwin-sc, fig.width=6, fig.height=4, fig.cap="Sensitivity curves for the mean, median, and Hodges--Lehmann estimator on Darwin's data. Each curve shows how the estimate on 14 pairs shifts when a fifteenth observation $x$ is added, scaled by $n=15$. The mean is unbounded; the median and HL are bounded.", echo=FALSE>>=
-d14 <- d[-15]
+<<darwin-sc, fig.width=6, fig.height=4, fig.cap="Sensitivity curves for the mean, median, and Hodges--Lehmann estimator on Darwin's data. Each curve shows how the estimate on 15 pairs shifts when a sixteenth observation $x$ is added, scaled by $n+1=16$. The mean is unbounded; the median and HL are bounded.", echo=FALSE>>=
+#d14 <- d[-15]
 xs  <- seq(min(d) - 10, max(d) + 10, length.out = 401)
 
+#sc <- function(estimator) {
+#  T14 <- estimator(d14)
+#  sapply(xs, function(x) 15 * (estimator(c(d14, x)) - T14))
+#}
 sc <- function(estimator) {
-  T14 <- estimator(d14)
-  sapply(xs, function(x) 15 * (estimator(c(d14, x)) - T14))
+  Tn <- estimator(d)
+  sapply(xs, function(x) 16 * (estimator(c(d, x)) - Tn))
 }
 
 sc_mean   <- sc(mean)
@@ -189,7 +202,7 @@ estimator from the median. What does is efficiency. At a normal
 distribution, the asymptotic relative efficiency of the
 Hodges--Lehmann estimator against the sample mean is $3/\pi \approx
 0.955$, compared with $2/\pi \approx 0.637$ for the median
-(c.f., \cite{hm11}). That is, at the normal the
+(c.f., \citealp{hm11}). That is, at the normal the
 Hodges--Lehmann estimator loses about $5\%$ efficiency relative to the mean,
 while the median loses about $37\%$. At heavier-tailed distributions
 both rank-based estimators outperform the mean, and the Hodges--Lehmann
@@ -281,11 +294,11 @@ nothing in the definition demands that we compute half a billion
 pairwise averages to find it. 
 
 Whether or not the computational optimization of 
- an algorithm matters depends on the problem. \citet{knuth74} cautioned that "premature optimization is the root of all evil," a warning that the effort of finding a faster algorithm is often not repaid. 
+ an algorithm matters depends on the problem. \citet{knuth74} cautioned that ``premature optimization is the root of all evil,'' a warning that the effort of finding a faster algorithm is often not repaid. 
 The Hodges--Lehmann estimator is a case where the effort is repaid, because the direct implementation runs out of memory long before typical modern sample sizes.
 
 
-\section{Iterative Algorithms}
+\section{Iterative algorithms}
 
 The Wilcoxon signed-rank test provides a different characterization of
 the Hodges--Lehmann estimator, one that leads directly to a faster
@@ -654,10 +667,10 @@ case for trading a closed-form expression for an iterative method.
 
 In practice both could be implemented in a single function, with the direct method used for small $n$ and the iterative method for large $n$. This is the convention used in the base R function \verb+wilcox.test+ - with a cutoff at $n = 50$ for the one-sample case.
 
-\section{Confidence Interval Coverage}
+\section{Confidence interval coverage}
 \label{sec:coverage}
 Prior to version 4.6.0 R \citep{Rcore} the confidence interval in \verb+wilcox.test+ listed the incorrect coverage. The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
-The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\cite{hw99}) . 
+The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\citealp{hw99}) . 
 
 
 <<coverage, echo=TRUE>>=
@@ -682,13 +695,13 @@ cat("Simulation estimated coverage of wilcoxon: ")
 mean( (ciMat1[1,] < 0) & (ciMat1[2,] > 0) )
 @
 
-\section{The Two-Sample Problem}
+\section{The two-sample problem}
 \label{sec:twosample}
 
 The one-sample location model extends naturally to a two-sample location
 shift model. Suppose we observe independent samples $x_1, \ldots, x_m$
-and $y_1, \ldots, y_n$ where $X_i \sim F(\,\cdot\, + \Delta)$ and
-$Y_j \sim F(\cdot)$. Positive $\Delta$ means that the distribution of $X$ is shifted to the right
+and $y_1, \ldots, y_n$ where $X_i \sim X$ and
+$Y_j \sim Y$ where $D(X)=D(Y)+\Delta$ and $D(\cdot)$ denotes {\em distribution}. Positive $\Delta$ means that the distribution of $X$ is shifted to the right
 of the distribution of $Y$. The Hodges--Lehmann estimator of $\Delta$ is
 \[
 \hat\Delta_{\HL} = \med\{x_i - y_j : 1 \le i \le m, \; 1 \le j \le n\},
@@ -816,8 +829,9 @@ near-linearly. The \verb+_vec+ variant of \verb+toms516+ is uniformly
 faster than the interpreted-R \verb+_port+, and the gap is
 substantial: at sample sizes above $n = 100$, the \verb+_vec+ variant
 runs about three times faster than \verb+_port+, illustrating how
-pushing an inner loop out of interpreted R into base R's compiled
-primitives can yield a large constant-factor speedup.
+%pushing an inner loop out of interpreted R into base R's compiled
+%primitives can yield a large constant-factor speedup.
+vectorization — pushing an inner loop out of interpreted R into base R's compiled primitives — can yield a large constant-factor speedup.
 
 The parallel with the one-sample case is exact in both structure and
 consequence. For small samples the two algorithms are comparable; for
@@ -832,10 +846,10 @@ Appendix~\ref{app:project}.
 This paper presents material that could be used in undergraduate or graduate courses on computing with data, data science, nonparametric statistics, and the like.
 The appendix contains ideas for student projects.
 
-We covered key aspects of computational optimazation in the context of the Hodges--Lehmann estimators of location (one-sample problem) and shift (two-sample problem). The direct method is simple and transparent, but scales poorly with sample size. The iterative method is more sophisticated, but scales well and is practical for large samples. Validation confirms that they produce the same results to within numerical tolerance.
+We covered key aspects of computational optimization in the context of the Hodges--Lehmann estimators of location (one-sample problem) and shift (two-sample problem). The direct method is simple and transparent, but scales poorly with sample size. The iterative method is more sophisticated, but scales well and is practical for large samples. Validation confirms that they produce the same results to within numerical tolerance.
 
 Computational efficiency aspects covered include root-finding versus a direct method, vectorization in R, using microbenchmark to measure elapsed time.  
-The TOMS 516 port (\citet{toms516}) illustrates that an algorithm written for a specific problem can lead to better computational performance than a general-purpose root-finder. 
+The TOMS 516 port (\citealp{toms516}) illustrates that an algorithm written for a specific problem can lead to better computational performance than a general-purpose root-finder. 
 We leave it as a point of discussion of whether the gains in speed are worth the extra complexity of implementing a specialized algorithm, or whether the general-purpose root-finder is sufficient for most practical purposes.
 
 
@@ -935,7 +949,7 @@ identical; only the implementation primitives change.
 built-in \verb+wilcox.test(x, y, conf.int = TRUE)+ produces its own
 point estimate and confidence interval via different internal
 machinery; the \verb+wilcoxon+ package provides validated versions
-of all three algorithms. Verify agreement or investigate discrepancies for the the point estimate and the CI. 
+of all three algorithms. Verify agreement or investigate discrepancies for the point estimate and the CI. 
 
 \end{itemize}
 
