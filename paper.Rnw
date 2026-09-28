@@ -35,7 +35,7 @@ knitr::opts_chunk$set(highlight = FALSE)
 \begin{abstract}
 We present discussions of algorithms which are suitable for a short module or lecture in an undergraduate or masters level data science, computational statistics, or nonparametrics course.
 The problems presented are the computation of the Hodges--Lehmann estimates of location and shift for the one- and two-sample problems, respectively.  The estimates can be derived by inverting the Wilcoxon test of hypothesis for the two problems.
-The challenge to be posed to students is that while a closed-form solution exists for the estimates, it may be computationally slower or even infeasible for even moderately sized datasets.
+The challenge posed to students is that while a closed-form solution exists for the estimates, it may be computationally slower or infeasible relative to an iterative method for even moderately sized datasets.
 The methods extend from point estimation to confidence interval estimation.
 Root-finding methods are discussed as ways to compute the estimates by inverting the tests.
 Illustrated is a progression from using the closed form solution to using existing software to using software developed for the specific problem.  This opens a discussion of when and how to optimize.
