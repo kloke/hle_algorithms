@@ -46,7 +46,7 @@ Keywords: Computational Efficiency; Confidence Intervals; Location Estimators; N
 
 \section{Introduction}
 
-Students in a first or second course in statistics or data science may encounter the
+Students in a first or second course in statistics or data science may learn the
 \citet{wilcoxon45} signed-rank test as a standard nonparametric alternative to
 the one-sample $t$-test. Less often, the associated location estimator
  - the \emph{Hodges--Lehmann estimator} \citep{hl63} - is covered. 
@@ -197,18 +197,18 @@ legend("topleft",
        lty = c(2, 3, 4), col = "grey11", bty = "n")
 @
 
-Robustness alone, however, does not distinguish the Hodges--Lehmann
-estimator from the median. What does is efficiency. At a normal
+Robustness, however, does not distinguish the Hodges--Lehmann
+estimator from the median;  efficiency does. At a normal
 distribution, the asymptotic relative efficiency of the
-Hodges--Lehmann estimator against the sample mean is $3/\pi \approx
+Hodges--Lehmann estimator to the sample mean is $3/\pi \approx
 0.955$, compared with $2/\pi \approx 0.637$ for the median
 (c.f., \citealp{hm11}). That is, at the normal the
 Hodges--Lehmann estimator loses about $5\%$ efficiency relative to the mean,
 while the median loses about $37\%$. At heavier-tailed distributions
 both rank-based estimators outperform the mean, and the Hodges--Lehmann
-estimator typically has the edge over the median.
+estimator typically has an edge over the median --- unless the data have extremely heavy tails.
 
-A small simulation makes the comparison concrete.
+A small simulation is carried out in the following code chunk to fix ideas.
 
 <<eff-sim>>=
 set.seed(1)
@@ -228,13 +228,10 @@ round(rbind(
 
 Rows give efficiencies relative to the sample mean; values above one
 indicate better performance. At the normal, the Hodges--Lehmann
-estimator is nearly as efficient as the mean while the median trails
-by a good margin. At the Student-$t$ distribution with 3 degrees of freedom, $t_3$, both rank-based estimators
+estimator is almost as efficient as the mean while the median is less efficient.
+At the Student-$t$ distribution with 3 degrees of freedom, $t_3$, both rank-based estimators
 are much more efficient than the mean,
-and, of the two robust estimators, the Hodges--Lehmann estimator definitely has the edge in efficiency. The
-pattern --- comparable to the mean at the normal, better than the
-median away from it --- is the standard case for the Hodges--Lehmann
-estimator as a default choice for symmetric location.
+and, of the two robust estimators, the Hodges--Lehmann estimator definitely has the edge in efficiency. 
 
 
 \section{A direct algorithm}
@@ -285,13 +282,9 @@ an $O(n \log n)$ computation somewhat more than twice as long, and
 an $O(n^2)$ computation four times as long.
 
 The direct algorithm for the Hodges--Lehmann estimator is a nested
-loop of this kind: it forms a pairwise average for each ordered pair
-$(i, j)$ with $i \le j$. Both time and memory are $O(n^2)$. This is
-not because the algorithm is inefficient --- it is essentially
-optimal for what it does --- but because it does far more than the
-problem requires. The Hodges--Lehmann estimator is a single number;
-nothing in the definition demands that we compute half a billion
-pairwise averages to find it. 
+loop: it forms a pairwise average for each ordered pair
+$(i, j)$ with $i \le j$. Both time and memory are $O(n^2)$. 
+
 
 Whether or not the computational optimization of 
  an algorithm matters depends on the problem. \citet{knuth74} cautioned that ``premature optimization is the root of all evil,'' a warning that the effort of finding a faster algorithm is often not repaid. 
@@ -432,8 +425,8 @@ bisect(W, min(d) - 1, max(d) + 1, x = d)
 median(walsh(d))
 @
 
-The two estimates agree closely. Bisection has recovered the direct
-answer without computing all of the Walsh averages.
+The two estimates agree closely. Bisection gives the same 
+result without computing all of the Walsh averages.
 
 To see the algorithm in action, Table~\ref{tab:bisect-trace} traces the
 iterations of bisection on Darwin's data, and
@@ -575,8 +568,7 @@ library(wilcoxon)
 wilcoxon_ci_1_uniroot(d)
 @
 
-The point estimate matches \verb+hle_uniroot+ up to tolerance; the
-confidence interval is a bonus.
+The point estimate matches \verb+hle_uniroot+ up to tolerance.
 
 
 \section{Validation}
@@ -584,13 +576,13 @@ confidence interval is a bonus.
 
 Agreement on Darwin's data is a single case. Before treating the
 iterative method as a drop-in replacement for the direct one we
-should check that the two give the same answer on many samples, not
-just this one.
+should check that the two give the same answer on many samples.
+In the next code chunk we simulate many samples and determine the largest difference between the two methods.
 
 <<validate>>=
 set.seed(1)
-n    <- 100
-nsim <- 1000
+n    <- 100   # sample size
+nsim <- 1000  # number of simulations
 diffs <- replicate(nsim, {
   x <- rnorm(n)
   median(walsh(x)) - hle_uniroot(x)
@@ -601,26 +593,29 @@ max(abs(diffs))
 The largest discrepancy across a thousand simulated samples of size
 $n = 100$ is negligible for any statistical purpose. This is what we
 expect: the two definitions of the Hodges--Lehmann estimator are
-mathematically equivalent \citep{hl63}, so any residual
+equivalent \citep{hl63}, so any 
 disagreement reflects only numerical tolerances --- the working
 precision of \verb+uniroot+ and the width of the interval on which
 $W(\theta) = 0$.
 
-The exercise is not a formality. Speed alone is not an improvement:
-an iterative method that runs in a fraction of the time is of no use
-if its output is subtly different from the direct one. Validation
-confirms that the two algorithms are interchangeable in results, so
-the choice between them comes down to computational cost.
+Accuracy is essential.  
+Speed alone is not an improvement.
+An iterative method that runs faster is of no use if the values are incorrect.
+Validation confirms that the two algorithms are interchangeable.
+Now the choice comes down to computational cost.
 
 
 \section{Timing}
 \label{sec:timing}
 
-The direct method is $O(n^2)$; the iterative method is $O(n \log n
-\cdot \log(1/\epsilon))$. In principle the iterative method should
-win for large $n$. This section measures the practical crossover
+%The direct method is $O(n^2)$; the iterative method is $O(n \log n
+%\cdot \log(1/\epsilon))$. 
+%In principle the iterative method should
+%win for large $n$. 
+This section measures the practical crossover
 using the \verb+microbenchmark+ package \citep{microbenchmark}.
 Note that the function \verb|walsh| is not run for $n > 1000$ as it is too slow - as the plot indicates.
+The following code chunk runs the simulation and presents the results; the results are also displayed in Figure~\ref{fig:timing-plot}.
 
 <<timing,echo=TRUE>>=
 library(microbenchmark)
@@ -659,7 +654,7 @@ method's quadratic cost pulls it upward on the log--log plot with
 slope close to two, while the iterative method rises much more slowly.
 Beyond $n = 1000$ the direct method is not run at all due to its slowness.
 
-The theoretical big-$O$ prediction and the measured behavior are in agreement.
+%The theoretical big-$O$ prediction and the measured behavior are in agreement.
 For a sample of the size that a modern applied problem might present ---
 tens of thousands or more --- the direct implementation is not even an
 option, while the iterative implementation remains routine. This is the practical
@@ -670,7 +665,7 @@ In practice both could be implemented in a single function, with the direct meth
 \section{Confidence interval coverage}
 \label{sec:coverage}
 Prior to version 4.6.0 R \citep{Rcore} the confidence interval in \verb+wilcox.test+ listed the incorrect coverage. The \verb+wilcoxon+ package implements the methods as described in \citet{km24} which agree with \citet{bauer72}.
-The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\citealp{hw99}) . 
+The following code simulates the coverage of the confidence interval for the one-sample case (c.f.~\citealp{hw99}). 
 
 
 <<coverage, echo=TRUE>>=
@@ -694,6 +689,8 @@ mean( (ciMat0[1,] < 0) & (ciMat0[2,] > 0) )
 cat("Simulation estimated coverage of wilcoxon: ")
 mean( (ciMat1[1,] < 0) & (ciMat1[2,] > 0) )
 @
+
+Note the two methods: \verb|wilcox.test| and \verb|wilcoxon_ci_1| have the same estimated coverage which agree with the nominal value.
 
 \section{The two-sample problem}
 \label{sec:twosample}
@@ -735,25 +732,25 @@ averages. The iterative method invokes a root-finder on $U(\Delta) -
 mn/2$. Each iteration requires one evaluation of $U(\Delta)$, and the
 key observation is that this evaluation need not itself cost $O(mn)$:
 when both samples are sorted, $U(\Delta)$ can be computed by a single
-two-pointer scan in $O(m + n)$ time. The overall cost of iterative
-estimation is then $O((m+n) \log((m+n)/\epsilon))$, essentially
-linear in the combined sample size.
+ scan in $O(m + n)$ time. 
+%The overall cost of iterative
+%estimation is then $O((m+n) \log((m+n)/\epsilon))$, essentially
+%linear in the combined sample size.
 
 The \verb+wilcoxon+ R package \citep{wilcoxon} implements three algorithms:
 \verb+wilcoxon_ci_2_exact+ forms the $mn$ pairwise differences and
 takes their median; \verb+wilcoxon_ci_2_uniroot+ uses \verb+uniroot+
-on $U(\Delta) - mn/2$ with an efficient two-pointer $U$-evaluator;
+on $U(\Delta) - mn/2$ with an efficient $U$-evaluator;
 and \verb+wilcoxon_ci_2_toms516+ uses an Illinois-modified regula-falsi method in the style of \citet{toms516}. The toms516 backend has
 two implementation variants: \verb+_port+ is a direct interpreted-R
-translation of the original Fortran, while \verb+_vec+ replaces the
-two-pointer walk with \verb+findInterval+, pushing the sorted-array
-traversal into base R's compiled C loop for a large constant-factor
+translation of the original Fortran, while \verb+_vec+ 
+uses \verb+findInterval+, pushing the sorted-array
+scan into base R's compiled C loop for a large constant-factor
 speedup. R's built-in \\
 \begin{center}
 \verb+wilcox.test(x, y, conf.int = TRUE)$estimate+ 
 \end{center}
-also returns this
-quantity, with the additional cost of also constructing a confidence interval - representing three minimizations rather than one as well as computing the test statistic and its $p$-value.
+ returns the HLE, with the additional cost of constructing a confidence interval --- representing three minimizations rather than one --- as well as computing the test statistic and its $p$-value.
 When speed is a concern - for example in a big-data setting or for resampling (bootstrap) - the \verb+wilcoxon+ package represents a better choice.
 
 \subsection*{Validation}
@@ -833,13 +830,7 @@ runs about three times faster than \verb+_port+, illustrating how
 %primitives can yield a large constant-factor speedup.
 vectorization — pushing an inner loop out of interpreted R into base R's compiled primitives — can yield a large constant-factor speedup.
 
-The parallel with the one-sample case is exact in both structure and
-consequence. For small samples the two algorithms are comparable; for
-large ones the direct method becomes infeasible while the iterative
-one remains routine. A validation study and a timing sweep would
-confirm the same picture. Implementation and empirical verification
-are left as a project; a suggested outline appears in
-Appendix~\ref{app:project}.
+An outline for a student project --- applying the processes presented in earlier sections for the one-sample methods to the two-sample shift problem --- is provided in Appendix~\ref{app:project}.
 
 \section{Conclusion}
 
@@ -891,7 +882,7 @@ Implement a function \verb+hle_2_uniroot(x, y)+ with two components:
 U(\Delta) = \#\{(i, j) : x_i - y_j > \Delta\}.
 \]
 With $x$ and $y$ sorted, this can be computed in $O(m + n)$ time
-using a single scan with a two-pointer index into $y$. A naive
+using a single scan. A naive
 nested loop is $O(mn)$ and would defeat the exercise.
 
 \item A wrapper that calls \verb+uniroot+ (or the \verb+bisect+
@@ -911,44 +902,31 @@ to numerical tolerance. Report the maximum absolute discrepancy.
 
 Following Section~\ref{sec:timing}, run a timing sweep at equal $m =
 n \in \{25, 50, 100, 500, 1000, 1500, 2000\}$. Cap the direct method
-at a sample size beyond which it becomes impractical. Produce a
+at a sample size before it becomes impractical to compute. Produce a
 log--log plot of elapsed time versus sample size and confirm the
 theoretical scaling: quadratic for the direct method, near-linear for
 the iterative one.
 
-\subsection*{Notes}
-
-The two-pointer scan is the crux of Task 2. Implemented naively, the
-iterative method offers no speed advantage over the direct one. As in
-the one-sample case, $U(\Delta)$ is integer-valued and may equal
-$mn/2$ on a plateau; any $\Delta$ in that plateau is a valid root of
-$U - mn/2$. The direct estimate is the midpoint of the plateau, and
-the iterative estimate is somewhere inside it, so a discrepancy on
-the order of the plateau width is expected.
-
 \subsection*{Extensions}
 
-The tasks above form a minimal viable project. Several extensions
-offer scope for more advanced students or a follow-up assignment.
+The tasks above form a viable project. Extensions below may be added based on the interests of the students and instructor.
+
 
 \begin{itemize}
 
-\item \textbf{Compiled evaluator.} Reimplement the two-pointer scan
-for $U(\Delta)$ in \texttt{Rcpp} \citep{Rcpp} to achieve true
-$O(m + n)$ complexity with tight constant factors. Benchmark against
-a base-R version built on \verb+findInterval+.
+\item \textbf{Compiled evaluator.} Reimplement $U(\Delta)$ in \texttt{Rcpp} \citep{Rcpp}.
+ Benchmark against a base-R version built on \verb+findInterval+.
 
 \item \textbf{Alternative primitives.} Reimplement the counting or
-ranking steps using \texttt{data.table} \citep{datatable} operations
-(\texttt{data.table::foverlaps}, non-equi joins) or \texttt{dplyr}
-\citep{dplyr} verbs (\texttt{dplyr::ntile}, ranking functions).
+ranking steps using \texttt{data.table} \citep{datatable} 
+or \texttt{dplyr} \citep{dplyr}. 
 Compare timings against the base-R version. The algorithms are
 identical; only the implementation primitives change.
 
-\item \textbf{Compare against reference implementations.} R's
+\item \textbf{Compare with base R implementations.} R's
 built-in \verb+wilcox.test(x, y, conf.int = TRUE)+ produces its own
-point estimate and confidence interval via different internal
-machinery; the \verb+wilcoxon+ package provides validated versions
+point estimate and confidence interval.
+The \verb+wilcoxon+ package provides validated versions
 of all three algorithms. Verify agreement or investigate discrepancies for the point estimate and the CI. 
 
 \end{itemize}
