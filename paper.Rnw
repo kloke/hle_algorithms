@@ -98,12 +98,9 @@ Self-Fertilisation in the Vegetable Kingdom} \citep{darwin1876}, reporting on th
 of fifteen pairs of \emph{Zea mays} (corn) plants. Within each pair,
 one plant had been cross-fertilized while the other was self-fertilized and
 the two were grown in the same pot - representing a paired design. 
-Darwin's question was whether
-cross-fertilization produced taller plants. He suspected so, but was
-uncertain what weight to place on the numbers he had recorded. Half a century
-later \citet{fisher35} used the same data to illustrate the
-paired $t$-test, and it has been a fixture of introductory
-nonparametrics since.
+Darwin's research question  asked whether cross-fertilized plants grew taller than the self-fertilized.
+Later \citet{fisher35} used the same data to illustrate the paired $t$-test.
+An analysis of these data is often included in a course on nonparametrics.
 
 As with the paired t-test, we work with the paired differences (cross- minus self-fertilized, in
 inches).
@@ -131,7 +128,7 @@ walsh <- function(x) {
 median(walsh(d))
 @
 \noindent
-The dotplot of the differences in Figure~\ref{fig:darwin-dot} shows the sensitivity of the mean to the low-valued outliers (\Sexpr{sort(d)[1:2]}).
+The dotplot of the differences in Figure~\ref{fig:darwin-dot} illustrates the sensitivity of the mean to the low-valued outliers: (\Sexpr{sort(d)[1:2]}).
 The median and the Hodges--Lehmann estimates are less sensitive to the outlying points.
 %The three estimators disagree. The mean is pulled toward the pair of
 %negative differences at the bottom of the sample; the median and
@@ -197,9 +194,9 @@ legend("topleft",
        lty = c(2, 3, 4), col = "grey11", bty = "n")
 @
 
-Robustness, however, does not distinguish the Hodges--Lehmann
-estimator from the median;  efficiency does. At a normal
-distribution, the asymptotic relative efficiency of the
+Both the Hodges--Lehmann estimator and the median have shown resistance to the low-valued outliers.
+What distinguishes the Hodges--Lehmann estimator is efficiency.
+At a normal distribution, the asymptotic relative efficiency of the
 Hodges--Lehmann estimator to the sample mean is $3/\pi \approx
 0.955$, compared with $2/\pi \approx 0.637$ for the median
 (c.f., \citealp{hm11}). That is, at the normal the
@@ -229,7 +226,7 @@ round(rbind(
 Rows give efficiencies relative to the sample mean; values above one
 indicate better performance. At the normal, the Hodges--Lehmann
 estimator is almost as efficient as the mean while the median is less efficient.
-At the Student-$t$ distribution with 3 degrees of freedom, $t_3$, both rank-based estimators
+At the Student-$t$ distribution with 3 degrees of freedom ($t_3$) both rank-based estimators
 are much more efficient than the mean,
 and, of the two robust estimators, the Hodges--Lehmann estimator definitely has the edge in efficiency. 
 
@@ -241,9 +238,8 @@ all $n(n+1)/2$ Walsh averages, then return their median. The
 \verb+walsh+ function of the previous section computes the Walsh averages and 
 base R's \verb+median+ does the rest. For Darwin's data ($n = 15$, hence
 there are $120$ Walsh averages), the computation is essentially instantaneous.
-Nothing about the code suggests trouble.
 
-But the code has a hidden cost that grows very quickly with $n$.
+The code has a hidden cost that grows very quickly with $n$.
 Consider a sample of $n = 1000$ standard normal observations.
 
 <<scale-1000>>=
@@ -258,15 +254,16 @@ of memory, and the computation completes in a fraction of a second.
 At $n = 10{,}000$ there would be roughly fifty million averages
 requiring several hundred megabytes; the computation still finishes,
 but slows noticeably. At $n = 100{,}000$ the intermediate matrix of
-pairwise sums alone would require some $80$ GB of memory, and the
-computation cannot proceed on any ordinary workstation.
+pairwise sums alone would require about $80$ GB of memory - the
+computation cannot be carried out in memory on an standard laptop or desktop.
 
-Behavior of this kind is described by the language of \emph{big-$O$}
+
+Operational costs may be described using \emph{big-$O$}
 notation. For a function $T(n)$ describing the running time or
 memory use of an algorithm on input of size $n$, we write $T(n) =
 O(g(n))$ if $T(n)$ grows no faster than a constant multiple of
 $g(n)$ for large $n$. The precise constants depend on the machine
-and the implementation; the leading-order behavior does not, and it
+and the implementation; the \textit{leading-order} behavior does not, and it
 is a property of the algorithm itself.
 
 Familiar examples make the notation concrete. Computing the sample
@@ -334,7 +331,8 @@ W <- function(theta, x) {
 }
 @
 
-The plot below shows $W(\theta)$ across a range of $\theta$ values. It is a decreasing
+The graphic in Figure~\ref{fig:W-plot}
+plots $W(\theta)$ across a range of $\theta$ values. It is a decreasing
 step function of $\theta$ which steps down at each Walsh average.
 The Hodges--Lehmann estimate is the value of $\theta$ at which $W(\theta)$ crosses zero.
 <<W-plot, fig.width=6, fig.height=4, fig.cap="The signed-rank statistic $W(\\theta)$ for Darwin's plant-height differences. The function is a monotone and piecewise constant, decreasing step function; it crosses zero at the Hodges--Lehmann estimate.", echo=FALSE>>=
@@ -349,7 +347,7 @@ legend("topright",
        lty = 3, col = "grey", bty = "n")
 @
 
-Two features of the plot deserve attention. First, $W$ is monotone
+Two features of the plot deserve mention. First, $W$ is monotone
 decreasing in $\theta$: as $\theta$ grows, more of the residuals $x_i
 - \theta$ become negative, and the signed-ranks contribute more
 negatively to the sum. Monotonicity guarantees a unique crossing of
@@ -358,13 +356,12 @@ somewhere on the horizontal axis of the plot; for the example, specifically at t
 Second, $W$ is not smooth. It is piecewise constant, with jumps at
 the Walsh averages, and its derivative in the ordinary sense either
 does not exist or equals zero. Because it is monotone, though, the concept of slope persists.
-Methods for finding minima or roots
-that require derivatives, however, will not apply directly.
-
-Monotonicity alone, however, is enough. Any numerical method that
+Methods for finding minima or roots that require derivatives cannot be applied here.
+Monotonicity alone, however, is all that is needed.
+A numerical method that
 locates a zero of a function by evaluating it repeatedly --- rather
-than differentiating it --- can find $\hat\theta_{\HL}$ without ever
-constructing a Walsh average.
+than differentiating it --- can find $\hat\theta_{\HL}$ without 
+constructing a single Walsh average.
 
 
 \section{Bisection: an iterative alternative}
@@ -390,8 +387,7 @@ replace $b$ with $m$; if $W(m) = 0$ we are done. Each iteration
 halves the width of the bracket, so after $k$ iterations the crossing
 is located to within $(b_0 - a_0)/2^k$ of a known point.
 
-Translated directly to R:
-
+In the next code chunk is a function that implements bisection. 
 <<bisect>>=
 bisect <- function(f, a, b, tol = 1e-6, ...) {
   fa <- f(a, ...); fb <- f(b, ...)
@@ -405,15 +401,13 @@ bisect <- function(f, a, b, tol = 1e-6, ...) {
   (a + b) / 2
 }
 @
-
+\noindent
 The \verb+tol+ argument controls when the loop stops. Each iteration
 halves the width of the bracket, so after $k$ iterations the width is
 $(b_0 - a_0)/2^k$ and the returned midpoint lies within half that
 width of the sign change. The bracket strictly decreases and falls
 below any positive tolerance in finitely many steps, so bisection is
-guaranteed to terminate. The default $\text{tol} = 10^{-6}$ locates
-$\hat\theta_{HL}$ to within $5 \times 10^{-7}$ in at most a few dozen
-iterations for brackets of practical size.
+guaranteed to terminate. 
 
 An initial bracket is easy to obtain: $W$ takes its most positive
 value when $\theta$ is below all the data, and its most negative
@@ -425,10 +419,10 @@ bisect(W, min(d) - 1, max(d) + 1, x = d)
 median(walsh(d))
 @
 
-The two estimates agree closely. Bisection gives the same 
-result without computing all of the Walsh averages.
+The two estimates agree closely. Bisection provides the same 
+result without computing the Walsh averages.
 
-To see the algorithm in action, Table~\ref{tab:bisect-trace} traces the
+To better see how the algorithm works, Table~\ref{tab:bisect-trace} traces the
 iterations of bisection on Darwin's data, and
 Figure~\ref{fig:bisect-iter} plots the midpoints on the graph of $W$.
 The initial bracket spans the full range of the observations, and
@@ -476,13 +470,13 @@ par(mfrow = c(1, 2))
 # Left: full view, first four midpoints only
 plot(thetas, Ws, type = "s",
      xlab = expression(theta), ylab = expression(W(theta)))
-abline(h = 0, lty = 2, col = "grey")
-abline(v = hl, lty = 3, col = "grey")
+abline(h = 0, lty = 2, col = "grey20")
+abline(v = hl, lty = 3, col = "grey20")
 points(trace$m[1:4], trace$Wm[1:4], pch = 19)
 text(trace$m[1:4], trace$Wm[1:4], labels = trace$k[1:4], pos = 4)
 legend("topright",
        legend = expression(hat(theta)[HL]),
-       lty = 3, col = "grey", bty = "n")
+       lty = 3, col = "grey20", bty = "n")
 
 # Right: zoom to theta in [2, 4], all midpoints in that window
 xr    <- c(2, 4)
@@ -492,8 +486,8 @@ yr    <- range(c(Ws[in_zx], trace$Wm[in_zp]))
 plot(thetas[in_zx], Ws[in_zx], type = "s",
      xlab = expression(theta), ylab = expression(W(theta)),
      ylim = yr)
-abline(h = 0, lty = 2, col = "grey")
-abline(v = hl, lty = 3, col = "grey")
+abline(h = 0, lty = 2, col = "grey20")
+abline(v = hl, lty = 3, col = "grey20")
 points(trace$m[in_zp], trace$Wm[in_zp], pch = 19)
 text(trace$m[in_zp], trace$Wm[in_zp],
      labels = trace$k[in_zp], pos = 4)
@@ -527,12 +521,12 @@ with interpolation --- specifically Brent's method \citep{brent73} --- so that o
 smooth functions it can converge much faster while still falling back
 on bisection when the interpolation misbehaves.
 
-For our step-function $W$ the interpolation buys little --- there is
+For the step-function $W$ the interpolation buys little --- there is
 no smooth curve to work with --- but the fallback to bisection means
 the algorithm still converges reliably. The function \verb+uniroot+ is a
 well-tested tool with sensible defaults.
-So there is generally little to no reason to reinvent it in production code. 
-The call structure is essentially the same as our \verb+bisect+.
+So there is often little or no reason to reinvent it in production code. 
+The call structure is similar to the \verb+bisect+ function.
 
 <<uniroot-demo>>=
 fit <- uniroot(W, interval = range(d), x = d)
@@ -567,8 +561,8 @@ implementation omits.
 library(wilcoxon)
 wilcoxon_ci_1_uniroot(d)
 @
-
-The point estimate matches \verb+hle_uniroot+ up to tolerance.
+\noindent
+The point estimate matches \verb+hle_uniroot+.
 
 
 \section{Validation}
@@ -593,7 +587,7 @@ max(abs(diffs))
 The largest discrepancy across a thousand simulated samples of size
 $n = 100$ is negligible for any statistical purpose. This is what we
 expect: the two definitions of the Hodges--Lehmann estimator are
-equivalent \citep{hl63}, so any 
+equivalent, so any 
 disagreement reflects only numerical tolerances --- the working
 precision of \verb+uniroot+ and the width of the interval on which
 $W(\theta) = 0$.
@@ -614,6 +608,8 @@ Now the choice comes down to computational cost.
 %win for large $n$. 
 This section measures the practical crossover
 using the \verb+microbenchmark+ package \citep{microbenchmark}.
+In the following code chunk we time the two methods on samples of
+increasing size, from $n = 25$ to $n = 2000$.
 Note that the function \verb|walsh| is not run for $n > 1000$ as it is too slow - as the plot indicates.
 The following code chunk runs the simulation and presents the results; the results are also displayed in Figure~\ref{fig:timing-plot}.
 
@@ -652,7 +648,8 @@ At the smallest sample sizes, the two methods are both quite fast,
 each taking a fraction of a millisecond. As $n$ grows, the direct
 method's quadratic cost pulls it upward on the log--log plot with
 slope close to two, while the iterative method rises much more slowly.
-Beyond $n = 1000$ the direct method is not run at all due to its slowness.
+Beyond $n = 1000$ the direct method is not run at all as it is apparent the method will be too slow at larger sample sizes.
+
 
 %The theoretical big-$O$ prediction and the measured behavior are in agreement.
 For a sample of the size that a modern applied problem might present ---
@@ -672,7 +669,8 @@ The following code simulates the coverage of the confidence interval for the one
 # c.f., HW (1999) Section 3.3
 set.seed(1999)
 n <- 9
-nsim <- 190000
+#nsim <- 190000
+nsim <- 190
 sampMat <- matrix(rt(n*nsim,9),nrow=nsim)
 alpha <- psignrank(5,n)
 
@@ -900,7 +898,7 @@ to numerical tolerance. Report the maximum absolute discrepancy.
 
 \subsection*{Task 4: Timing}
 
-Following Section~\ref{sec:timing}, run a timing sweep at equal $m =
+Following Section~\ref{sec:timing}, run a timing simulation at equal $m =
 n \in \{25, 50, 100, 500, 1000, 1500, 2000\}$. Cap the direct method
 at a sample size before it becomes impractical to compute. Produce a
 log--log plot of elapsed time versus sample size and confirm the
